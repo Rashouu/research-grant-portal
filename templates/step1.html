@@ -1,0 +1,26 @@
+{% from "_macros.html" import csrf, input, select, choice, err %}
+{% set edit = active and is_owner %}
+{% set v = form if form else s %}
+<form method="post" class="step-form profile-form" novalidate>
+  {{ csrf() }}<input type="hidden" name="action" value="save">
+  <fieldset class="field">
+    <legend>Affiliation</legend>
+    <div class="choices four">
+      {% for key, a in core.AFFILIATIONS.items() %}{{ choice('affiliation', key, a.label, tip=a.note, checked=(v.affiliation == key), disabled=not edit) }}{% endfor %}
+    </div>
+    {{ err(errors.affiliation) }}
+  </fieldset>
+  <div class="grid two">
+    {{ input('researcher_name', 'Full name', v.researcher_name, errors.researcher_name, disabled=not edit, extra='autocomplete="name"') }}
+    <div class="affiliated-only">{{ input('id_number', 'ID number', v.id_number, errors.id_number, disabled=not edit) }}</div>
+  </div>
+  <div class="affiliated-only">{{ select('unit', 'College or office', core.UNITS, v.unit, errors.unit, placeholder='Select one', disabled=not edit, cls='half') }}</div>
+  <section class="block divided">
+    <h3>Index and category</h3>
+    <div class="grid two">
+      {{ select('category', 'Subject category', core.SUBJECTS, v.category, errors.category, placeholder='Select a category', disabled=not edit) }}
+      {{ select('research_type', 'Research type', core.RESEARCH_TYPES, v.research_type, errors.research_type, placeholder='Select a type', disabled=not edit) }}
+    </div>
+  </section>
+  {% if edit %}<div class="step-actions"><button class="btn btn-primary">Save and continue</button></div>{% endif %}
+</form>

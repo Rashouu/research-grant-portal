@@ -1,0 +1,47 @@
+{% extends "base.html" %}
+{% from "_macros.html" import icon, badge %}
+{% block title %}Home · {% endblock %}
+{% block content %}
+{% set admin = g.user.role == 'ADMIN' %}
+<header class="page-head">
+  <p class="eyebrow">{{ today.strftime('%A, %B') }} {{ today.day }}, {{ today.year }}</p>
+  <h1 class="page-title">{{ greeting }}</h1>
+  <p class="page-sub">{{ g.user.full_name }} · {{ core.ROLES[g.user.role] }}</p>
+</header>
+
+<div class="hub-wrap">
+<nav class="hub" aria-label="Go to">
+  <a class="hub-card" href="{{ url_for('dashboard') }}">
+    <span class="hub-icon tone-slate">{{ icon('layout-dashboard') }}</span>
+    <span class="hub-text">
+      <span class="hub-title">Dashboard{{ icon('arrow-right', 'hub-arrow') }}</span>
+      <span class="hub-desc">{{ 'All studies, and the reviews, approvals and audits awaiting you.' if admin else 'Your submissions, their progress and the steps that need your action.' }}</span>
+      <span class="hub-meta">
+        {% if not summary.total %}<span>{{ 'No studies yet' if admin else 'No submissions yet' }}</span>
+        {% else %}<span>{{ summary.total|plural('study', 'studies') if admin else summary.total|plural('submission') }}</span>
+        {% if summary.waiting %}{{ badge(summary.waiting|length ~ ' awaiting your action', 'amber') }}{% else %}{{ badge('Up to date', 'emerald') }}{% endif %}{% endif %}
+      </span>
+    </span>
+  </a>
+  <a class="hub-card" href="{{ url_for('archive') }}">
+    <span class="hub-icon tone-emerald">{{ icon('library') }}</span>
+    <span class="hub-text">
+      <span class="hub-title">Research archive{{ icon('arrow-right', 'hub-arrow') }}</span>
+      <span class="hub-desc">Archived studies, searchable by title, author, keyword or accession number.</span>
+      <span class="hub-meta"><span>{{ archived|plural('archived study', 'archived studies') }}</span></span>
+    </span>
+  </a>
+  <a class="hub-card" href="{{ url_for('account') }}">
+    <span class="hub-icon tone-neutral">{{ icon('user-round') }}</span>
+    <span class="hub-text">
+      <span class="hub-title">Account{{ icon('arrow-right', 'hub-arrow') }}</span>
+      <span class="hub-desc">Your name, email, role and password.</span>
+      <span class="hub-meta">
+        {% if is_default %}{{ badge('Default password in use', 'amber') }}
+        {% else %}<span>Member since {{ g.user.created_at|date }}</span>{% endif %}
+      </span>
+    </span>
+  </a>
+</nav>
+</div>
+{% endblock %}

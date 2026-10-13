@@ -1,0 +1,14 @@
+{% extends "base.html" %}
+{% block title %}{{ code }} · {% endblock %}
+{% block content %}
+<div class="auth">
+  <section class="card">
+    <div class="card-body stack">
+      <p class="eyebrow">Error {{ code }}</p>
+      <h1>{{ 'Something needs attention' if code in (400, 413) else 'Page not available' }}</h1>
+      <p>{{ message }}</p>
+      <p><a class="btn btn-secondary" href="{{ url_for('home') if g.get('user') else url_for('index') }}">Go back to the start</a></p>
+    </div>
+  </section>
+</div>
+{% endblock %}

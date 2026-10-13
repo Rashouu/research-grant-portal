@@ -1,0 +1,78 @@
+{% from "_macros.html" import csrf, input, select, file, choice, err, badge, icon %}
+{% set edit = active and is_owner %}
+{% if active and is_owner and s.track and not missing %}<p class="role-note">Awaiting verification.</p>{% endif %}
+<div class="accession">
+  <div>
+    <p class="muted small">Accession number</p>
+    <p class="accession-no">{{ s.accession_no }}</p>
+    <p class="muted small">Assigned {{ s.accession_at|date }}</p>
+    <p>{{ badge('Archived ' ~ (s.archived_at|date), 'emerald') if s.archived_at else badge('Not yet archived', 'amber') }}</p>
+  </div>
+  <dl class="facts">
+    <div><dt>Visibility</dt><dd>{{ core.VISIBILITY[s.visibility].label if s.visibility in core.VISIBILITY else '-' }}</dd></div>
+    <div><dt>Subject category</dt><dd>{{ s.category or '-' }}</dd></div>
+    <div><dt>Research type</dt><dd>{{ s.research_type or '-' }}</dd></div>
+    <div><dt>Index terms</dt><dd>{{ keywords|join(', ') or '-' }}</dd></div>
+  </dl>
+</div>
+
+<form method="post" enctype="multipart/form-data" class="track-form step-form" novalidate>
+  {{ csrf() }}<input type="hidden" name="action" value="save">
+  <fieldset class="field">
+    <legend>Assistance track</legend>
+    <div class="choices three">
+      {% for key, tr in core.TRACKS.items() %}
+      {% set cap = (tr.ceilings.get(s.affiliation, 0) * 100)|money %}
+      {{ choice('track', key, tr.label, tip=tr.blurb, meta=('No financial assistance' if key == 'archival' else 'Up to ' ~ cap ~ ' for ' ~ (aff.group if aff else 'researchers')), checked=(s.track == key), disabled=not edit) }}
+      {% endfor %}
+    </div>
+    {{ err(errors.track) }}
+  </fieldset>
+
+  {% for key, tr in core.TRACKS.items() %}{% if edit or s.track == key %}
+  <section class="track-panel{% if not edit %} static{% endif %}" data-track="{{ key }}" aria-label="{{ tr.label }}">
+    {% if tr.fields %}
+    <h3>{{ 'Conference details' if key == 'conference' else 'Journal details' }}</h3>
+    <div class="grid {{ 'three' if tr.fields|length == 3 else 'two' }}">
+      {% for fkey, flabel in tr.fields %}{% set fval = details.get(fkey, '') if s.track == key else '' %}
+      {% if fkey == 'indexing' %}
+      {{ select('detail_' ~ key ~ '_' ~ fkey, flabel, core.INDEXING, fval, placeholder='Select one', disabled=not edit) }}
+      {% else %}
+      {{ input('detail_' ~ key ~ '_' ~ fkey, flabel, fval, disabled=not edit) }}
+      {% endif %}
+      {% endfor %}
+    </div>
+    {% endif %}
+    <h3>Verification checklist</h3>
+    <ul class="checklist">
+      {% for dkey, dlabel in tr.docs %}{% set f = files.get('track:' ~ key ~ ':' ~ dkey) if s.track == key else none %}
+      <li>
+        <div class="check-label">
+          <span class="check-icon{{ ' ok' if f }}" aria-hidden="true">{% if f %}{{ icon('check') }}{% endif %}</span>
+          <div><p class="strong">{{ dlabel }}</p><p class="muted small">{{ 'Attached' if f else 'Not attached' }}</p></div>
+        </div>
+        {% if f or edit %}{{ file('doc_' ~ key ~ '_' ~ dkey, dlabel, f, errors.get('doc_' ~ key ~ '_' ~ dkey), accept='.pdf,.jpg,.jpeg,.png', disabled=not edit, hide_label=True) }}{% endif %}
+      </li>
+      {% endfor %}
+      {% if key == 'archival' %}
+      <li class="is-na">
+        <div class="check-label">
+          <span class="check-icon na" aria-hidden="true">{{ icon('minus') }}</span>
+          <div><p class="strong">Financial verification</p></div>
+        </div>
+        {{ badge('Not applicable') }}
+      </li>
+      {% endif %}
+    </ul>
+    {% if active and s.track == key and missing %}<p class="muted small panel-note">Missing: {{ missing|join(', ') }}.</p>{% endif %}
+  </section>
+  {% endif %}{% endfor %}
+  {% if edit %}<div class="step-actions"><button class="btn btn-primary">Save</button></div>{% endif %}
+</form>
+
+{% if active and is_admin %}
+<form method="post" class="step-actions">
+  {{ csrf() }}<input type="hidden" name="action" value="verify">
+  <button class="btn btn-primary"{% if not s.track or missing %} disabled{% endif %}>Verify and archive</button>
+</form>
+{% endif %}

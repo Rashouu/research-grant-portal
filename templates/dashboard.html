@@ -1,0 +1,86 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf, badge %}
+{% block title %}Dashboard · {% endblock %}
+{% block content %}
+{% set admin = g.user.role == 'ADMIN' %}
+<header class="page-head row-between">
+  <div>
+    <h1 class="page-title">{{ 'Overview' if admin else 'My submissions' }}</h1>
+    {% if items %}<p class="page-sub">{{ items|length|plural('study', 'studies') }}{% if cleared %} · {{ cleared }} cleared{% endif %}</p>{% endif %}
+  </div>
+  {% if not admin and items %}
+  <form method="post" action="{{ url_for('new_study') }}">{{ csrf() }}<button class="btn btn-primary">New submission</button></form>
+  {% endif %}
+</header>
+
+{% if not items %}
+<section class="card empty">
+  <p class="strong">{{ 'No studies yet' if admin else 'No submissions yet' }}</p>
+  {% if not admin %}
+  <form method="post" action="{{ url_for('new_study') }}">{{ csrf() }}<button class="btn btn-primary">Start a submission</button></form>
+  {% endif %}
+</section>
+{% else %}
+
+{% if waiting %}
+<section class="card">
+  <div class="card-head"><h2>Action required</h2></div>
+  <ul class="task-list">
+    {% for item in waiting %}
+    <li>
+      <a href="{{ url_for('study', study_id=item.s.id) }}">
+        <span class="task-title">{{ item.title }}</span>
+        <span class="muted small">{{ item.s.accession_no or 'No accession number' }} · Step {{ item.s.step }}, {{ core.STEPS[item.s.step - 1].short }}{% if admin %} · {{ item.s.researcher_name }}{% endif %}</span>
+      </a>
+      {{ badge(item.status.text, item.status.tone) }}
+    </li>
+    {% endfor %}
+  </ul>
+</section>
+{% endif %}
+
+<section class="card">
+  <div class="card-head"><h2>{{ 'All studies' if admin else 'Submissions' }}</h2></div>
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>Title</th>{% if admin %}<th>Researcher</th>{% endif %}<th>Accession</th><th>Step</th><th>Status</th>{% if not admin %}<th class="actions"><span class="sr-only">Actions</span></th>{% endif %}</tr></thead>
+      <tbody>
+        {% for item in items %}
+        <tr>
+          <td><a class="strong-link" href="{{ url_for('study', study_id=item.s.id) }}">{{ item.title }}</a></td>
+          {% if admin %}<td>{{ item.s.researcher_name }}</td>{% endif %}
+          <td class="nowrap">{{ item.s.accession_no or '-' }}</td>
+          <td class="nowrap">{{ item.s.step }}. {{ core.STEPS[item.s.step - 1].short }}</td>
+          <td>{{ badge(item.status.text, item.status.tone) }}</td>
+          {% if not admin %}<td class="actions">{% if item.deletable %}<a class="link-danger" href="{{ url_for('delete_study', study_id=item.s.id) }}">Delete<span class="sr-only"> {{ item.title }}</span></a>{% endif %}</td>{% endif %}
+        </tr>
+        {% endfor %}
+      </tbody>
+    </table>
+  </div>
+</section>
+
+{% if grants %}
+<section class="card">
+  <div class="card-head"><h2>Grants</h2></div>
+  <div class="table-wrap">
+    <table class="table">
+      <thead><tr><th>Study</th><th class="num">Allocation</th><th class="num">Released</th><th class="num">Audited</th><th class="num">Remaining</th><th class="num">Pending audit</th></tr></thead>
+      <tbody>
+        {% for gr in grants %}
+        <tr>
+          <td><a class="strong-link" href="{{ url_for('study', study_id=gr.s.id) }}">{{ gr.s.accession_no }}</a><span class="muted small block">{{ gr.s.researcher_name }}</span></td>
+          <td class="num">{{ gr.fin.allocation|money }}</td><td class="num">{{ gr.fin.disbursed|money }}</td>
+          <td class="num">{{ gr.fin.audited|money }}</td><td class="num">{{ gr.fin.remaining|money }}</td><td class="num">{{ gr.fin.pending|money }}</td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      {% if grants|length > 1 %}
+      <tfoot><tr><th>Total</th><th class="num">{{ totals.allocation|money }}</th><th class="num">{{ totals.disbursed|money }}</th><th class="num">{{ totals.audited|money }}</th><th class="num">{{ totals.remaining|money }}</th><th class="num">{{ totals.pending|money }}</th></tr></tfoot>
+      {% endif %}
+    </table>
+  </div>
+</section>
+{% endif %}
+{% endif %}
+{% endblock %}

@@ -1,0 +1,138 @@
+{% from "_macros.html" import csrf, input, file, err, badge %}
+{% set pct = ((100 * sel.audited / sel.disbursed)|round(0, 'floor')|int) if sel.disbursed else 0 %}
+<nav class="tabs" aria-label="Tranches">
+  {% for t in fin.stats %}
+  <a href="{{ url_for('study_step', study_id=s.id, n=6, tranche=t.n) }}"{% if t.n == sel.n %} aria-current="true"{% endif %}>
+    <strong>Tranche {{ t.n }}</strong>
+    <span>{{ 'Liquidated' if t.liquidated else ('In liquidation' if t.released_at else 'Not released') }} · {{ t.amount|money }}</span>
+  </a>
+  {% endfor %}
+</nav>
+
+<section class="calc" aria-label="Tranche {{ sel.n }} balance">
+  <div class="figures">
+    <div class="figure"><span>Disbursed, Tranche {{ sel.n }}</span><strong>{{ sel.disbursed|money }}</strong></div>
+    <span class="op" aria-hidden="true">−</span>
+    <div class="figure"><span>Audited receipts ({{ sel.approved_count }})</span><strong>{{ sel.audited|money }}</strong></div>
+    <span class="op" aria-hidden="true">=</span>
+    <div class="figure result {{ 'is-zero' if sel.released_at and sel.remaining == 0 else ('is-open' if sel.released_at else '') }}"><span>Remaining balance</span><strong>{{ sel.remaining|money }}</strong></div>
+  </div>
+  <div class="calc-foot">
+    <div class="meter"><span style="width: {{ pct }}%"></span></div>
+    <span class="small">{{ pct }}% liquidated</span>
+    {% if sel.pending_count %}<span class="small muted">After the {{ sel.pending_count|plural('pending receipt') }}: {{ (sel.remaining - sel.pending)|money }}</span>{% endif %}
+  </div>
+</section>
+
+{% if not sel.released_at %}
+<div class="callout"><p>Released after Tranche {{ sel.n - 1 }} is fully liquidated.</p></div>
+{% elif fin.current and fin.current.n == sel.n and sel.pending_count == 0 and sel.remaining > 0 %}
+<div class="callout tone-amber">
+  <p class="callout-title">{{ sel.remaining|money }} is not yet liquidated</p>
+  <p>File receipts for it or return it to the cashier.</p>
+  {% if active and is_admin %}
+  <form method="post" class="inline-form" novalidate>
+    {{ csrf() }}<input type="hidden" name="action" value="record_return"><input type="hidden" name="tranche" value="{{ sel.n }}">
+    {{ input('return_or', "Cashier's OR number", form.return_or if form else '', errors.return_or, uid='return-or') }}
+    <button class="btn btn-secondary">Record return</button>
+  </form>
+  {% endif %}
+</div>
+{% endif %}
+
+{% if fin.next and fin.next.n == sel.n + 1 %}
+<div class="callout tone-emerald">
+  <p class="callout-title">Tranche {{ sel.n }} is fully liquidated</p>
+  {% if active and is_admin %}
+  <form method="post">{{ csrf() }}<input type="hidden" name="action" value="release"><button class="btn btn-primary">Release Tranche {{ fin.next.n }}</button></form>
+  {% else %}
+  <p>Awaiting the release of Tranche {{ fin.next.n }}.</p>
+  {% endif %}
+</div>
+{% endif %}
+
+{% if fin.complete %}
+<div class="callout tone-emerald">
+  <p class="callout-title">Every tranche is fully liquidated</p>
+  {% if active and (is_owner or is_admin) %}
+  <form method="post">{{ csrf() }}<input type="hidden" name="action" value="clearance"><button class="btn btn-primary">Send for clearance</button></form>
+  {% endif %}
+</div>
+{% endif %}
+
+{% if active and is_owner and fin.current and fin.current.n == sel.n %}
+<details class="add-box"{% if errors and not errors.return_or %} open{% endif %}>
+  <summary class="btn btn-primary">File a receipt</summary>
+  <form method="post" enctype="multipart/form-data" class="stack" novalidate>
+    {{ csrf() }}<input type="hidden" name="action" value="file_receipt"><input type="hidden" name="tranche" value="{{ sel.n }}">
+    <p class="muted small">Up to {{ sel.open|money }} of Tranche {{ sel.n }} can still be filed.</p>
+    <div class="grid three">
+      {{ input('receipt_date', 'Receipt date', form.receipt_date if form else '', errors.receipt_date, type='date', extra='max="' ~ core.today() ~ '"') }}
+      {{ input('or_no', 'OR or invoice number', form.or_no if form else '', errors.or_no) }}
+      {{ input('amount', 'Amount (₱)', form.amount if form else '', errors.amount, extra='inputmode="decimal" placeholder="0.00"') }}
+    </div>
+    <div class="grid two">
+      {{ input('payee', 'Description and payee', form.payee if form else '', errors.payee) }}
+      <div class="field{% if errors.line_key %} has-error{% endif %}">
+        <label for="f-line_key">Budget line item</label>
+        <select id="f-line_key" name="line_key">
+          <option value="">Select a line item</option>
+          {% for u in usage if u.amount > 0 %}<option value="{{ u.key }}"{% if form and form.line_key == u.key %} selected{% endif %}>{{ u.label }} ({{ u.left|money }} left)</option>{% endfor %}
+        </select>
+        {{ err(errors.line_key) }}
+      </div>
+    </div>
+    {{ file('scan', 'Receipt scan', none, errors.scan, accept='.pdf,.jpg,.jpeg,.png', hint='PDF, JPG or PNG, up to 5 MB.') }}
+    <div class="form-end"><button class="btn btn-primary btn-sm">File receipt</button></div>
+  </form>
+</details>
+{% endif %}
+
+<h3>Receipts</h3>
+{% if sel.receipts %}
+<ul class="receipts">
+  {% for r in sel.receipts %}
+  <li class="receipt">
+    <div class="receipt-main">
+      <p><span class="strong">{{ r.payee }}</span></p>
+      <p class="muted small">{% if r.kind == 'refund' %}Returned to the cashier{% else %}{{ core.LINE_ITEMS.get(r.line_key, r.line_key) }}{% endif %} · OR {{ r.or_no }} · {{ r.receipt_date|date }}{% if r.file_id %} · <a href="{{ url_for('download', file_id=r.file_id) }}" target="_blank" rel="noopener">View scan</a>{% endif %}</p>
+      {% if r.status == 'rejected' %}<p class="small reject-note">Rejected: {{ r.remarks }}</p>{% endif %}
+    </div>
+    <div class="receipt-side">
+      <span class="money{{ ' struck' if r.status == 'rejected' }}">{{ r.amount_cents|money }}</span>
+      {{ badge({'pending': 'Pending audit', 'approved': 'Audited', 'rejected': 'Rejected'}[r.status], {'pending': 'amber', 'approved': 'emerald', 'rejected': 'red'}[r.status]) }}
+    </div>
+    {% if active and r.status == 'pending' %}
+    <div class="receipt-actions">
+      {% if is_admin %}
+      <form method="post">{{ csrf() }}<input type="hidden" name="action" value="approve_receipt"><input type="hidden" name="item_id" value="{{ r.id }}"><input type="hidden" name="tranche" value="{{ sel.n }}"><button class="btn btn-success btn-sm">Approve</button></form>
+      <details class="reject"{% if errors.get('remarks:' ~ r.id) %} open{% endif %}>
+        <summary class="btn btn-quiet btn-sm">Reject</summary>
+        <form method="post" class="inline-form" novalidate>
+          {{ csrf() }}<input type="hidden" name="action" value="reject_receipt"><input type="hidden" name="item_id" value="{{ r.id }}"><input type="hidden" name="tranche" value="{{ sel.n }}">
+          {{ input('remarks', 'Reason', '', errors.get('remarks:' ~ r.id), uid='remarks-' ~ r.id) }}
+          <button class="btn btn-danger btn-sm">Reject receipt</button>
+        </form>
+      </details>
+      {% elif is_owner %}
+      <form method="post">{{ csrf() }}<input type="hidden" name="action" value="delete_receipt"><input type="hidden" name="item_id" value="{{ r.id }}"><input type="hidden" name="tranche" value="{{ sel.n }}"><button class="link-btn">Withdraw</button></form>
+      {% endif %}
+    </div>
+    {% endif %}
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<p class="muted">{{ 'No receipts yet.' if sel.released_at else 'Not released yet.' }}</p>
+{% endif %}
+
+<h3>Budget line usage</h3>
+<div class="table-wrap">
+  <table class="table">
+    <thead><tr><th>Line item</th><th class="num">Approved</th><th class="num">Filed</th><th class="num">Left</th></tr></thead>
+    <tbody>
+      {% for u in usage %}<tr><td>{{ u.label }}</td><td class="num">{{ u.amount|money }}</td><td class="num">{{ u.filed|money }}</td><td class="num">{{ u.left|money }}</td></tr>{% endfor %}
+    </tbody>
+    <tfoot><tr><th>Total</th><th class="num">{{ fin.allocation|money }}</th><th class="num">{{ usage|sum(attribute='filed')|money }}</th><th class="num">{{ usage|sum(attribute='left')|money }}</th></tr></tfoot>
+  </table>
+</div>

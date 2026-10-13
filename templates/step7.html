@@ -1,0 +1,26 @@
+{% from "_macros.html" import csrf, icon %}
+{% if active and not is_admin and not s.certified_at %}<p class="role-note">Awaiting certificate issuance.</p>{% endif %}
+<ul class="checks">
+  {% for c in checks %}
+  <li class="{{ 'is-na' if c.na else ('is-ok' if c.ok else 'is-no') }}">
+    <span class="check-icon{{ ' na' if c.na else (' ok' if c.ok else ' no') }}" aria-hidden="true">{% if c.na %}{{ icon('minus') }}{% elif c.ok %}{{ icon('check') }}{% endif %}</span>
+    <span>{{ c.label }}{% if c.na %} <span class="muted">(not applicable)</span>{% endif %}</span>
+    {% if not c.na %}<span class="sr-only">{{ 'complete' if c.ok else 'outstanding' }}</span>{% endif %}
+  </li>
+  {% endfor %}
+</ul>
+{% if s.certified_at %}
+<div class="certificate-box">
+  <div>
+    <p class="eyebrow">Clearance certificate</p>
+    <p class="accession-no">{{ s.certificate_no }}</p>
+    <p class="muted">Issued {{ s.certified_at|date }} · Verification code <span class="mono">{{ s.certificate_code }}</span></p>
+  </div>
+  <a class="btn btn-primary" href="{{ url_for('certificate', study_id=s.id) }}" target="_blank" rel="noopener">Open the certificate</a>
+</div>
+{% elif active and is_admin %}
+<form method="post" class="step-actions">
+  {{ csrf() }}<input type="hidden" name="action" value="issue">
+  <button class="btn btn-primary"{% if not all_ok %} disabled{% endif %}>Issue clearance certificate</button>
+</form>
+{% endif %}

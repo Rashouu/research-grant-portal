@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf, input %}
+{% block title %}Choose a new password · {% endblock %}
+{% block content %}
+<div class="auth">
+  <section class="card">
+    <div class="card-head">
+      <h1>Choose a new password</h1>
+      <p class="muted">Enter the code sent to <strong>{{ email }}</strong>.</p>
+    </div>
+    <form method="post" class="card-body stack" novalidate>
+      {{ csrf() }}
+      {{ input('code', 'Reset code', '', errors.code, extra='class="otp" inputmode="numeric" autocomplete="one-time-code" maxlength="7" placeholder="000000" required') }}
+      <div class="grid two">
+        {{ input('password', 'New password', '', errors.password, type='password', hint='At least 8 characters.', extra='autocomplete="new-password" required') }}
+        {{ input('confirm', 'Confirm new password', '', errors.confirm, type='password', extra='autocomplete="new-password" required') }}
+      </div>
+      <button class="btn btn-primary btn-block">Change password</button>
+    </form>
+    <form method="post" action="{{ url_for('forgot') }}" class="card-foot">
+      {{ csrf() }}<input type="hidden" name="email" value="{{ email }}">
+      <span class="muted">Didn't receive it?</span>
+      <button class="link-btn">Resend code</button>
+      <a href="{{ url_for('forgot') }}">Change email</a>
+    </form>
+  </section>
+</div>
+{% endblock %}

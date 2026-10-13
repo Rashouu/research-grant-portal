@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf, err, icon %}
+{% block title %}Sign in · {% endblock %}
+{% block topbar %}<a class="btn btn-rail btn-sm" href="{{ url_for('archive') }}">Research archive</a>{% endblock %}
+{% block content %}
+<div class="gate">
+  <p class="eyebrow">Welcome</p>
+  <h1 class="page-title">Choose how to continue</h1>
+  <div class="gate-grid">
+    <section class="card" aria-labelledby="login-title">
+      <div class="card-head"><h2 id="login-title">Institutional login</h2></div>
+      <form method="post" action="{{ url_for('login') }}" class="card-body stack" novalidate>
+        {{ csrf() }}
+        <div class="field">
+          <label for="f-email">Email</label>
+          <input id="f-email" name="email" type="email" autocomplete="username" value="{{ email }}" required>
+        </div>
+        <div class="field">
+          <label for="f-password">Password</label>
+          <input id="f-password" name="password" type="password" autocomplete="current-password" required>
+        </div>
+        {{ err(error) }}
+        <button class="btn btn-primary btn-block">Sign in</button>
+        <p class="row-links"><a href="{{ url_for('forgot') }}">Forgot password?</a><a href="{{ url_for('register') }}">Create a researcher account</a></p>
+      </form>
+    </section>
+    <section class="card" aria-labelledby="guest-title">
+      <div class="card-head">
+        <h2 id="guest-title">External or guest access</h2>
+        <p class="muted">Read-only, and no account is needed.</p>
+      </div>
+      <div class="card-body stack">
+        <ul class="ticks">
+          <li>{{ icon('check') }}<span>Titles, authors and abstracts of public studies</span></li>
+          <li>{{ icon('check') }}<span>Accession numbers, subjects and index terms</span></li>
+          <li class="no">{{ icon('x') }}<span>No submissions, reviews or grant records</span></li>
+        </ul>
+        <a class="btn btn-secondary btn-block" href="{{ url_for('archive') }}">Browse the public archive</a>
+      </div>
+    </section>
+  </div>
+</div>
+{% endblock %}

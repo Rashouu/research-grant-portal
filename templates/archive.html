@@ -1,0 +1,43 @@
+{% extends "base.html" %}
+{% from "_macros.html" import badge %}
+{% block title %}Research archive · {% endblock %}
+{% block content %}
+<header class="page-head">
+  <h1 class="page-title">Research archive</h1>
+  <p class="page-sub">{{ total|plural('record') }}</p>
+</header>
+<form method="get" class="search-bar" role="search">
+  <div class="field grow">
+    <label for="f-q">Search</label>
+    <input id="f-q" type="search" name="q" value="{{ query }}" placeholder="Title, author, keyword or accession number">
+  </div>
+  <div class="field">
+    <label for="f-subject">Subject</label>
+    <select id="f-subject" name="subject">
+      <option value="">All subjects</option>
+      {% for sub in core.SUBJECTS %}<option{% if sub == subject %} selected{% endif %}>{{ sub }}</option>{% endfor %}
+    </select>
+  </div>
+  <div class="search-actions"><button class="btn btn-primary">Search</button>{% if query or subject %}<a class="btn btn-quiet" href="{{ url_for('archive') }}">Clear</a>{% endif %}</div>
+</form>
+{% if records %}
+<ul class="records">
+  {% for r in records %}
+  <li class="card record">
+    <div class="record-meta">
+      <span class="mono">{{ r.accession }}</span>
+      {{ badge(core.VISIBILITY[r.visibility].label, 'slate' if r.visibility == 'public' else ('amber' if r.visibility == 'restricted' else 'neutral')) }}
+      {% if r.cleared %}{{ badge('Cleared', 'emerald') }}{% endif %}
+    </div>
+    <h2 class="record-title">{{ r.title }}</h2>
+    <p class="muted">{{ r.authors|join(', ') }}{% if r.unit %} · {{ r.unit }}{% endif %} · {{ r.year }}</p>
+    {% if r.abstract %}<p class="record-abstract">{{ r.abstract }}</p>
+    {% else %}<p class="muted small">Abstract available on request.</p>{% endif %}
+    <p class="tags">{% for k in r.keywords %}<span class="tag">{{ k }}</span>{% endfor %}<span class="muted small">{{ r.subject }} · {{ r.type }}</span></p>
+  </li>
+  {% endfor %}
+</ul>
+{% else %}
+<div class="empty card"><p class="strong">No records found.</p></div>
+{% endif %}
+{% endblock %}

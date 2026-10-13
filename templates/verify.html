@@ -1,0 +1,28 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf, err %}
+{% block title %}Verify your email · {% endblock %}
+{% block content %}
+<div class="auth">
+  <section class="card">
+    <div class="card-head">
+      <h1>Verify your email</h1>
+      <p class="muted">Enter the 6-digit code sent to <strong>{{ email }}</strong>.</p>
+    </div>
+    <form method="post" class="card-body stack" novalidate>
+      {{ csrf() }}
+      <div class="field{% if error %} has-error{% endif %}">
+        <label for="f-code">Verification code</label>
+        <input id="f-code" name="code" class="otp" inputmode="numeric" autocomplete="one-time-code" maxlength="7" placeholder="000000" required autofocus>
+        {{ err(error) }}
+      </div>
+      <button class="btn btn-primary btn-block">Verify</button>
+    </form>
+    <form method="post" action="{{ url_for('resend_code') }}" class="card-foot">
+      {{ csrf() }}
+      <span class="muted">Didn't receive it?</span>
+      <button class="link-btn">Resend code</button>
+      <a href="{{ url_for('register') }}">Change email</a>
+    </form>
+  </section>
+</div>
+{% endblock %}

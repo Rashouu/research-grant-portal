@@ -1,0 +1,62 @@
+{% from "_macros.html" import csrf, select, err %}
+{% set edit = active and is_owner and s.grant_status == 'draft' %}
+<p class="lead-line">Ceiling for {{ aff.group }}: <strong>{{ ceiling|money }}</strong></p>
+{% if s.grant_status == 'submitted' %}
+<div class="callout tone-amber"><p>Submitted {{ s.grant_submitted_at|date }}. Awaiting approval.</p></div>
+{% elif s.grant_status == 'approved' %}
+<div class="callout tone-emerald"><p>Approved {{ s.grant_approved_at|date }}.</p></div>
+{% endif %}
+<form method="post" class="step-form" novalidate>
+  {{ csrf() }}
+  <div class="table-wrap">
+    <table class="table budget">
+      <thead><tr><th>Line item</th><th class="num">Amount (₱)</th></tr></thead>
+      <tbody>
+        {% for line in lines %}{% set fname = 'line_' ~ line.line_key %}
+        <tr>
+          <td><label for="f-{{ fname }}">{{ line.label }}</label></td>
+          <td class="num">
+            {% if edit %}
+            <input id="f-{{ fname }}" class="money-input{{ ' is-invalid' if errors.get(fname) }}" name="{{ fname }}" inputmode="decimal" placeholder="0.00" value="{{ form.get(fname, '') if form else ('%.2f'|format(line.amount_cents / 100) if line.amount_cents else '') }}">
+            {{ err(errors.get(fname)) }}
+            {% else %}{{ line.amount_cents|money }}{% endif %}
+          </td>
+        </tr>
+        {% endfor %}
+      </tbody>
+      <tfoot><tr><th>Total</th><th class="num">{{ budget_total|money }}</th></tr></tfoot>
+    </table>
+  </div>
+  {{ err(errors.budget) }}
+  {% if edit %}
+  {{ select('schedule', 'Release schedule', core.SCHEDULE_OPTIONS, form.schedule if form else s.schedule, cls='half') }}
+  {% else %}
+  <p><span class="muted">Release schedule:</span> {{ core.SCHEDULES[s.schedule].label }}</p>
+  {% endif %}
+  {% set parts = fin.stats if fin.stats else preview %}
+  {% if parts %}
+  <ol class="tranche-plan">
+    {% for p in parts %}
+    <li>
+      <span class="strong">Tranche {{ p.n }}</span>
+      <span class="muted">{{ p.pct }}%</span>
+      <span class="money">{{ p.amount|money }}</span>
+      <span class="muted small">{% if p.released_at %}Released {{ p.released_at|date }}{% elif p.n == 1 %}On approval{% else %}After Tranche {{ p.n - 1 }} is liquidated{% endif %}</span>
+    </li>
+    {% endfor %}
+  </ol>
+  {% endif %}
+  {% if edit %}
+  <div class="step-actions">
+    <button class="btn btn-secondary" name="action" value="save">Save draft</button>
+    <button class="btn btn-primary" name="action" value="submit">Submit for approval</button>
+  </div>
+  {% endif %}
+</form>
+{% if active and s.grant_status == 'submitted' %}
+  {% if is_admin %}
+  <form method="post" class="step-actions">{{ csrf() }}<input type="hidden" name="action" value="approve"><button class="btn btn-primary">Approve and release Tranche 1</button></form>
+  {% elif is_owner %}
+  <form method="post" class="step-actions">{{ csrf() }}<input type="hidden" name="action" value="withdraw"><button class="btn btn-secondary">Withdraw to edit</button></form>
+  {% endif %}
+{% endif %}

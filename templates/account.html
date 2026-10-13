@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf, input %}
+{% block title %}Account · {% endblock %}
+{% block content %}
+<header class="page-head">
+  <h1 class="page-title">Account</h1>
+  <p class="page-sub">{{ g.user.full_name }} · {{ g.user.email }} · {{ core.ROLES[g.user.role] }}</p>
+</header>
+{% if is_default %}
+<div class="callout tone-amber"><p>You are using the default admin password. Change it below.</p></div>
+{% endif %}
+<section class="card narrow-card">
+  <div class="card-head"><h2>Change password</h2></div>
+  <form method="post" class="card-body stack" novalidate>
+    {{ csrf() }}
+    {{ input('current', 'Current password', '', errors.current, type='password', extra='autocomplete="current-password"') }}
+    <div class="grid two">
+      {{ input('password', 'New password', '', errors.password, type='password', hint='At least 8 characters.', extra='autocomplete="new-password"') }}
+      {{ input('confirm', 'Confirm new password', '', errors.confirm, type='password', extra='autocomplete="new-password"') }}
+    </div>
+    <div><button class="btn btn-primary">Change password</button></div>
+  </form>
+</section>
+{% endblock %}

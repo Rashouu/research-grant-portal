@@ -1,0 +1,91 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>Certificate {{ s.certificate_no }} · {{ core.APP_NAME }}</title>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600&family=Source+Serif+4:opsz,wght@8..60,500;8..60,600;8..60,700&display=swap">
+  <style>
+    @page { size: A4 landscape; margin: 0; }
+    * { box-sizing: border-box; }
+    body { margin: 0; background: #e9edf3; color: #14213d; font: 14px/1.5 "Public Sans", system-ui, "Segoe UI", Arial, sans-serif; }
+    .toolbar { display: flex; justify-content: space-between; align-items: center; gap: 12px; max-width: 297mm; margin: 0 auto; padding: 16px 12px; }
+    .toolbar a { color: #1d3a63; font-weight: 600; }
+    .toolbar button { font: inherit; font-weight: 600; background: #1d3a63; color: #fff; border: 0; border-radius: 10px; padding: 10px 18px; cursor: pointer; }
+    .scroller { overflow-x: auto; padding: 0 12px 32px; }
+    .sheet { width: 297mm; height: 210mm; margin: 0 auto; background: #fffdf8; padding: 9mm; box-shadow: 0 10px 30px rgb(20 33 61 / 18%); }
+    .frame { position: relative; height: 100%; border: 1.2mm double #1d3a63; padding: 11mm 16mm 10mm; display: flex; flex-direction: column; align-items: center; text-align: center; }
+    .frame::before { content: ""; position: absolute; inset: 2.6mm; border: 0.3mm solid #b08d57; pointer-events: none; }
+    .kicker { margin: 0; letter-spacing: 0.24em; text-transform: uppercase; font-size: 10pt; font-weight: 600; color: #b08d57; }
+    h1 { font-family: "Source Serif 4", Georgia, serif; font-weight: 700; font-size: 25pt; line-height: 1.15; margin: 3mm 0 4mm; max-width: 210mm; }
+    .lead { margin: 0; font-size: 11pt; color: #44506a; }
+    .name { font-family: "Source Serif 4", Georgia, serif; font-size: 26pt; font-weight: 600; margin: 1mm 0 0; }
+    .meta { margin: 0 0 3mm; color: #44506a; font-size: 10.5pt; }
+    .title { font-family: "Source Serif 4", Georgia, serif; font-style: italic; font-size: 15pt; line-height: 1.3; margin: 1mm 0 5mm; max-width: 215mm; }
+    .facts { display: grid; grid-template-columns: repeat(4, auto); gap: 2mm 10mm; margin: 0 0 auto; font-size: 9.5pt; text-align: left; }
+    .facts div { display: grid; }
+    .facts dt { color: #6b7589; text-transform: uppercase; letter-spacing: 0.08em; font-size: 7.5pt; }
+    .facts dd { margin: 0; font-weight: 600; }
+    .bottom { width: 100%; display: grid; grid-template-columns: 1fr auto 1fr; align-items: end; gap: 8mm; }
+    .signs { display: flex; gap: 10mm; }
+    .signs div { flex: 1; display: grid; gap: 1.5mm; font-size: 9pt; color: #44506a; }
+    .signs span.line { border-top: 0.3mm solid #14213d; }
+    .seal { width: 34mm; height: 34mm; }
+    .verify { text-align: right; font-size: 8.5pt; color: #44506a; }
+    .verify strong { display: block; font-size: 11pt; color: #14213d; letter-spacing: 0.08em; }
+    @media print {
+      body { background: none; }
+      .toolbar { display: none; }
+      .scroller { padding: 0; overflow: visible; }
+      .sheet { box-shadow: none; margin: 0; }
+    }
+  </style>
+</head>
+<body>
+  <div class="toolbar">
+    <a href="{{ url_for('study_step', study_id=s.id, n=7) }}">Back to the study</a>
+    <button type="button" onclick="window.print()">Print or save as PDF</button>
+  </div>
+  <div class="scroller">
+    <main class="sheet">
+      <div class="frame">
+        <p class="kicker">{{ core.APP_NAME }}</p>
+        <h1>Institutional Research and Financial Clearance Certificate</h1>
+        <p class="lead">This certifies that</p>
+        <p class="name">{{ s.researcher_name }}</p>
+        <p class="meta">{{ aff.label if aff else '' }}{% if s.unit %}, {{ s.unit }}{% endif %}</p>
+        <p class="lead">has completed the research, archival and grant requirements for</p>
+        <p class="title">{{ title }}</p>
+        <dl class="facts">
+          <div><dt>Accession number</dt><dd>{{ s.accession_no }}</dd></div>
+          <div><dt>Repository access</dt><dd>{{ visibility }}</dd></div>
+          <div><dt>Assistance track</dt><dd>{{ track.label if track else '' }}</dd></div>
+          <div><dt>Grant liquidated</dt><dd>{% if fin %}{{ fin.allocation|money }} (100%){% else %}Not applicable{% endif %}</dd></div>
+        </dl>
+        <div class="bottom">
+          <div class="signs">
+            {% for role in core.SIGNATORIES[:2] %}<div><span class="line"></span><span>{{ role }}</span></div>{% endfor %}
+          </div>
+          <svg class="seal" viewBox="0 0 200 200" role="img" aria-label="Seal of the {{ core.APP_NAME }}">
+            <circle cx="100" cy="100" r="97" fill="none" stroke="#b08d57" stroke-width="2"/>
+            {% for path in seal %}<path d="{{ path }}" fill="none" stroke="#1d3a63" stroke-width="{{ 1.4 - loop.index0 * 0.3 }}"/>{% endfor %}
+            <circle cx="100" cy="100" r="44" fill="#1d3a63"/>
+            <g transform="translate(81 64) scale(1.583)" fill="none" stroke="#fffdf8" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M10 18v-7"/><path d="M11.119 2.205a2 2 0 0 1 1.762 0l7.84 3.846A.5.5 0 0 1 20.5 7h-17a.5.5 0 0 1-.22-.949z"/><path d="M14 18v-7"/><path d="M18 18v-7"/><path d="M3 22h18"/><path d="M6 18v-7"/>
+            </g>
+            <text x="100" y="124" text-anchor="middle" fill="#e9d9bd" font-family="Arial, sans-serif" font-size="10" letter-spacing="1.5">CLEARED</text>
+          </svg>
+          <div class="verify">
+            Certificate {{ s.certificate_no }}, issued {{ s.certified_at|date }}
+            <strong>{{ s.certificate_code }}</strong>
+            Verification code
+          </div>
+        </div>
+      </div>
+    </main>
+  </div>
+</body>
+</html>

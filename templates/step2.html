@@ -1,0 +1,37 @@
+{% from "_macros.html" import csrf, input, textarea, select, file, choice, err %}
+{% set edit = active and is_owner %}
+{% set v = form if form else s %}
+{% if s.accession_no %}
+<div class="callout tone-emerald"><p><strong>Accession number {{ s.accession_no }}</strong> · Submitted {{ s.accession_at|date }}</p></div>
+{% endif %}
+<form method="post" enctype="multipart/form-data" class="step-form" novalidate>
+  {{ csrf() }}
+  <section class="block">
+    <h3>Study details</h3>
+    {{ textarea('title', 'Research title', v.title, errors.title, rows=2, disabled=not edit, cls='serif-field') }}
+    {{ textarea('abstract', 'Abstract', v.abstract, errors.abstract, rows=7, hint='50 to 350 words.', disabled=not edit) }}
+    <div class="grid two">
+      {{ input('keywords', 'Keywords', v.keywords, errors.keywords, hint='3 to 6, separated by commas.', disabled=not edit) }}
+      {{ select('agenda', 'Research agenda', core.AGENDAS, v.agenda, errors.agenda, placeholder='Select an agenda', disabled=not edit) }}
+    </div>
+    {{ textarea('co_authors', 'Co-authors (optional)', v.co_authors, errors.co_authors, rows=3, hint='One name per line.', disabled=not edit) }}
+    {{ file('manuscript', 'Manuscript', files.get('manuscript'), errors.manuscript, accept=core.MANUSCRIPT_EXTS|join(','), hint='PDF or Word, up to 5 MB.', disabled=not edit) }}
+  </section>
+  <section class="block divided">
+    <h3>Notification and visibility</h3>
+    {{ input('notify_email', 'Notification email', v.notify_email, errors.notify_email, type='email', disabled=not edit, cls='half') }}
+    <fieldset class="field">
+      <legend>Visibility level in the archive</legend>
+      <div class="choices three">
+        {% for key, item in core.VISIBILITY.items() %}{{ choice('visibility', key, item.label, tip=item.note, checked=(v.visibility == key), disabled=not edit) }}{% endfor %}
+      </div>
+      {{ err(errors.visibility) }}
+    </fieldset>
+  </section>
+  {% if edit %}
+  <div class="step-actions">
+    <button class="btn btn-secondary" name="action" value="draft">Save draft</button>
+    <button class="btn btn-primary" name="action" value="submit">Submit</button>
+  </div>
+  {% endif %}
+</form>

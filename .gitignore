@@ -1,0 +1,7 @@
+research_grant_portal.db
+.env
+.venv/
+venv/
+__pycache__/
+*.pyc
+app_logging/

@@ -1,0 +1,27 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf %}
+{% block title %}Delete submission · {% endblock %}
+{% block content %}
+<div class="auth">
+  <section class="card">
+    <div class="card-head"><h1>Delete submission</h1></div>
+    <div class="card-body stack">
+      <div>
+        <p class="strong">{{ title }}</p>
+        <p class="muted small">{{ s.accession_no or 'No accession number' }} · Step {{ s.step }}, {{ core.STEPS[s.step - 1].short }}</p>
+      </div>
+      {% if deletable %}
+      <p>This permanently removes the submission, its files and its activity history.</p>
+      <form method="post" class="row-actions">
+        {{ csrf() }}
+        <a class="btn btn-secondary" href="{{ url_for('dashboard') }}">Cancel</a>
+        <button class="btn btn-danger">Delete submission</button>
+      </form>
+      {% else %}
+      <p>Submissions with released funds or a certificate cannot be deleted.</p>
+      <div class="row-actions"><a class="btn btn-secondary" href="{{ url_for('dashboard') }}">Back to dashboard</a></div>
+      {% endif %}
+    </div>
+  </section>
+</div>
+{% endblock %}

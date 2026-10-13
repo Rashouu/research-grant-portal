@@ -1,0 +1,24 @@
+{% extends "base.html" %}
+{% from "_macros.html" import csrf, input %}
+{% block title %}Create an account · {% endblock %}
+{% block content %}
+<div class="auth">
+  <section class="card">
+    <div class="card-head">
+      <h1>Create a researcher account</h1>
+      <p class="muted">A verification code will be sent to your email.</p>
+    </div>
+    <form method="post" class="card-body stack" novalidate>
+      {{ csrf() }}
+      {{ input('full_name', 'Full name', form.full_name, errors.full_name, extra='autocomplete="name" required') }}
+      {{ input('email', 'Email', form.email, errors.email, type='email', extra='autocomplete="email" required') }}
+      <div class="grid two">
+        {{ input('password', 'Password', '', errors.password, type='password', hint='At least 8 characters.', extra='autocomplete="new-password" required') }}
+        {{ input('confirm', 'Confirm password', '', errors.confirm, type='password', extra='autocomplete="new-password" required') }}
+      </div>
+      <button class="btn btn-primary btn-block">Continue</button>
+      <p class="muted small">Already have an account? <a href="{{ url_for('index') }}">Sign in</a></p>
+    </form>
+  </section>
+</div>
+{% endblock %}

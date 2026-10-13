@@ -1,0 +1,76 @@
+{% extends "base.html" %}
+{% from "_macros.html" import badge, icon %}
+{% block title %}{{ title }} · {% endblock %}
+{% block content %}
+{% set labels = {'done': 'Complete', 'current': 'In progress', 'locked': 'Locked', 'skipped': 'Not applicable'} %}
+<header class="study-head">
+  <p class="eyebrow"><a href="{{ url_for('dashboard') }}">Dashboard</a> / Submission</p>
+  <h1 class="study-title">{{ title }}</h1>
+  <div class="badges">
+    <span class="strong">{{ s.researcher_name }}</span>
+    {% if aff %}{{ badge(aff.label) }}{% endif %}
+    {% if s.accession_no %}<span class="badge tone-neutral mono">{{ s.accession_no }}</span>{% endif %}
+    {% if track and s.track_verified_at %}{{ badge(track.short, 'slate') }}{% endif %}
+    {{ badge(status.text, status.tone) }}
+  </div>
+</header>
+
+<div class="study-grid">
+  <nav class="rail" aria-label="Workflow steps">
+    <ol>
+      {% for st in core.STEPS %}{% set sst = states[st.n] %}
+      <li class="rail-item state-{{ sst }}{% if st.n == n %} is-open{% endif %}">
+        {% if st.n <= s.step %}<a href="{{ url_for('study_step', study_id=s.id, n=st.n) }}"{% if st.n == n %} aria-current="step"{% endif %}>{% else %}<span class="rail-locked">{% endif %}
+          <span class="rail-num" aria-hidden="true">{% if sst == 'done' %}{{ icon('check') }}{% elif sst == 'skipped' %}{{ icon('minus') }}{% else %}{{ st.n }}{% endif %}</span>
+          <span class="rail-text"><strong>{{ st.title }}</strong><small>{{ labels[sst] }}</small></span>
+        {% if st.n <= s.step %}</a>{% else %}</span>{% endif %}
+      </li>
+      {% endfor %}
+    </ol>
+  </nav>
+
+  <div class="study-main">
+    <section class="card step-card" aria-labelledby="step-title">
+      <header class="step-head">
+        <div>
+          <p class="eyebrow">Step {{ n }} of 7</p>
+          <h2 id="step-title">{{ step.title }}</h2>
+        </div>
+        {{ badge(labels[state], {'done': 'emerald', 'current': 'slate', 'skipped': 'neutral'}[state]) }}
+      </header>
+      <div class="step-body">
+        {% if errors %}<div class="callout tone-red" role="alert"><p>Please correct the highlighted fields.</p></div>{% endif %}
+        {% if state == 'current' and n in core.OWNER_STEPS and not is_owner %}<p class="role-note">Awaiting the researcher.</p>{% endif %}
+        {% if state == 'skipped' %}
+        <p class="muted">Not applicable to the archival-only pathway.</p>
+        {% else %}
+        {% include "step" ~ n ~ ".html" %}
+        {% endif %}
+      </div>
+      <footer class="step-foot">
+        {% if n > 1 %}<a class="btn btn-quiet" href="{{ url_for('study_step', study_id=s.id, n=n - 1) }}">Previous step</a>{% else %}<span></span>{% endif %}
+        {% if n < s.step %}<a class="btn btn-quiet" href="{{ url_for('study_step', study_id=s.id, n=n + 1) }}">Next step</a>{% endif %}
+      </footer>
+    </section>
+
+    <section class="card history" aria-labelledby="history-title">
+      <div class="card-head"><h2 id="history-title">Activity</h2></div>
+      <ol class="history-list">
+        {% for entry in history[:8] %}
+        <li><p>{{ entry.action }}</p><p class="muted small">{{ entry.actor }} · {{ entry.created_at|stamp }}</p></li>
+        {% endfor %}
+      </ol>
+      {% if history|length > 8 %}
+      <details class="history-more">
+        <summary>Show {{ (history|length - 8)|plural('older entry', 'older entries') }}</summary>
+        <ol class="history-list">
+          {% for entry in history[8:] %}
+          <li><p>{{ entry.action }}</p><p class="muted small">{{ entry.actor }} · {{ entry.created_at|stamp }}</p></li>
+          {% endfor %}
+        </ol>
+      </details>
+      {% endif %}
+    </section>
+  </div>
+</div>
+{% endblock %}

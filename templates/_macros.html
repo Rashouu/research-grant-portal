@@ -1,0 +1,86 @@
+{% macro csrf() %}<input type="hidden" name="csrf" value="{{ csrf_token() }}">{% endmacro %}
+
+{% macro err(message) %}{% if message %}<p class="error">{{ message }}</p>{% endif %}{% endmacro %}
+
+{# Icons from Lucide (lucide.dev), ISC license; see static/LICENSE-lucide.txt #}
+{% macro icon(name, cls='') -%}
+<svg class="icon{{ ' ' ~ cls if cls }}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true" focusable="false">
+{%- if name == 'landmark' -%}
+<path d="M10 18v-7"/><path d="M11.119 2.205a2 2 0 0 1 1.762 0l7.84 3.846A.5.5 0 0 1 20.5 7h-17a.5.5 0 0 1-.22-.949z"/><path d="M14 18v-7"/><path d="M18 18v-7"/><path d="M3 22h18"/><path d="M6 18v-7"/>
+{%- elif name == 'check' -%}
+<path d="M20 6 9 17l-5-5"/>
+{%- elif name == 'x' -%}
+<path d="M18 6 6 18"/><path d="m6 6 12 12"/>
+{%- elif name == 'minus' -%}
+<path d="M5 12h14"/>
+{%- elif name == 'house' -%}
+<path d="M15 21v-8a1 1 0 0 0-1-1h-4a1 1 0 0 0-1 1v8"/><path d="M3 10a2 2 0 0 1 .709-1.528l7-6a2 2 0 0 1 2.582 0l7 6A2 2 0 0 1 21 10v9a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2z"/>
+{%- elif name == 'layout-dashboard' -%}
+<rect width="7" height="9" x="3" y="3" rx="1"/><rect width="7" height="5" x="14" y="3" rx="1"/><rect width="7" height="9" x="14" y="12" rx="1"/><rect width="7" height="5" x="3" y="16" rx="1"/>
+{%- elif name == 'library' -%}
+<path d="m16 6 4 14"/><path d="M12 6v14"/><path d="M8 8v12"/><path d="M4 4v16"/>
+{%- elif name == 'user-round' -%}
+<circle cx="12" cy="8" r="5"/><path d="M20 21a8 8 0 0 0-16 0"/>
+{%- elif name == 'arrow-right' -%}
+<path d="M5 12h14"/><path d="m12 5 7 7-7 7"/>
+{%- elif name == 'plus' -%}
+<path d="M5 12h14"/><path d="M12 5v14"/>
+{%- endif -%}
+</svg>
+{%- endmacro %}
+
+{% macro input(name, label, value='', error=None, type='text', hint=None, disabled=False, extra='', cls='', uid=None, hide_label=False) %}
+{% set fid = 'f-' ~ (uid or name) %}
+<div class="field {{ cls }}{% if error %} has-error{% endif %}">
+  <label for="{{ fid }}"{% if hide_label %} class="sr-only"{% endif %}>{{ label }}</label>
+  <input id="{{ fid }}" name="{{ name }}" type="{{ type }}" value="{{ value if value is not none else '' }}"{% if disabled %} disabled{% endif %}{% if error %} aria-invalid="true"{% endif %} {{ extra|safe }}>
+  {% if hint %}<p class="hint">{{ hint }}</p>{% endif %}{{ err(error) }}
+</div>
+{% endmacro %}
+
+{% macro textarea(name, label, value='', error=None, rows=4, hint=None, disabled=False, cls='', uid=None, extra='') %}
+{% set fid = 'f-' ~ (uid or name) %}
+<div class="field {{ cls }}{% if error %} has-error{% endif %}">
+  <label for="{{ fid }}">{{ label }}</label>
+  <textarea id="{{ fid }}" name="{{ name }}" rows="{{ rows }}"{% if disabled %} disabled{% endif %}{% if error %} aria-invalid="true"{% endif %} {{ extra|safe }}>{{ value if value is not none else '' }}</textarea>
+  {% if hint %}<p class="hint">{{ hint }}</p>{% endif %}{{ err(error) }}
+</div>
+{% endmacro %}
+
+{% macro select(name, label, options, value='', error=None, placeholder=None, disabled=False, cls='', uid=None) %}
+{% set fid = 'f-' ~ (uid or name) %}
+<div class="field {{ cls }}{% if error %} has-error{% endif %}">
+  <label for="{{ fid }}">{{ label }}</label>
+  <select id="{{ fid }}" name="{{ name }}"{% if disabled %} disabled{% endif %}{% if error %} aria-invalid="true"{% endif %}>
+    {% if placeholder %}<option value="">{{ placeholder }}</option>{% endif %}
+    {% for option in options %}{% set v = option if option is string else option[0] %}{% set l = option if option is string else option[1] %}
+    <option value="{{ v }}"{% if v == value %} selected{% endif %}>{{ l }}</option>{% endfor %}
+  </select>
+  {{ err(error) }}
+</div>
+{% endmacro %}
+
+{% macro file(name, label, current=None, error=None, accept='.pdf', hint=None, disabled=False, hide_label=False, uid=None) %}
+{% set fid = 'f-' ~ (uid or name) %}
+<div class="field file-field{% if error %} has-error{% endif %}">
+  {% if not disabled or not hide_label %}<label for="{{ fid }}"{% if hide_label %} class="sr-only"{% endif %}>{{ label }}</label>{% endif %}
+  {% if current %}
+  <p class="file-current"><a href="{{ url_for('download', file_id=current.id) }}" target="_blank" rel="noopener">{{ current.file_name }}</a> <span class="muted">{{ current.size|size }}</span></p>
+  {% elif disabled %}<p class="muted">Not attached</p>{% endif %}
+  {% if not disabled %}<input id="{{ fid }}" type="file" name="{{ name }}" accept="{{ accept }}"{% if error %} aria-invalid="true"{% endif %}>{% endif %}
+  {% if hint and not disabled %}<p class="hint">{{ hint }}</p>{% endif %}
+  {{ err(error) }}
+</div>
+{% endmacro %}
+
+{# A radio option drawn as a card; its description appears only on hover or keyboard focus. #}
+{% macro choice(name, value, label, tip=None, meta=None, checked=False, disabled=False) %}
+<label class="choice">
+  <input type="radio" name="{{ name }}" value="{{ value }}"{% if checked %} checked{% endif %}{% if disabled %} disabled{% endif %}{% if tip %} aria-describedby="tip-{{ name }}-{{ value }}"{% endif %}>
+  <span class="choice-title">{{ label }}</span>
+  {% if meta %}<span class="choice-meta">{{ meta }}</span>{% endif %}
+  {% if tip %}<span class="tip" id="tip-{{ name }}-{{ value }}" role="tooltip">{{ tip }}</span>{% endif %}
+</label>
+{% endmacro %}
+
+{% macro badge(text, tone='neutral') %}<span class="badge tone-{{ tone }}">{{ text }}</span>{% endmacro %}

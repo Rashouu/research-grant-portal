@@ -1,0 +1,105 @@
+{% from "_macros.html" import csrf, input, textarea, select, file, badge, icon %}
+{% set total = critiques|length %}
+{% set resolved = critiques|selectattr('status', 'equalto', 'resolved')|list|length %}
+{% set cl = clearance %}
+{% set edit_cl = active and is_admin %}
+{% set f_in = form if form else {} %}
+{% if active and is_owner and resolved == total %}<p class="role-note">{{ 'Awaiting review sign-off.' if total else 'Under review.' }}</p>{% endif %}
+
+<section class="block">
+  <h3>Similarity and ethics clearance</h3>
+  {% if edit_cl %}<form method="post" enctype="multipart/form-data" class="stack" novalidate>{{ csrf() }}<input type="hidden" name="action" value="save_clearance">{% endif %}
+  <ul class="checklist">
+    <li>
+      <div class="check-label">
+        <span class="check-icon{{ ' ok' if cl.passes else (' bad' if s.similarity is not none) }}" aria-hidden="true">{% if cl.passes %}{{ icon('check') }}{% elif s.similarity is not none %}{{ icon('x') }}{% endif %}</span>
+        <div>
+          <p class="strong">Similarity index</p>
+          <p class="muted small">{% if s.similarity is none %}Not recorded{% else %}{{ '%g'|format(s.similarity) }}%{% if not cl.passes %}, must be below {{ '%g'|format(core.SIMILARITY_LIMIT) }}%{% endif %}{% endif %}</p>
+        </div>
+      </div>
+      {% if edit_cl %}{{ input('similarity', 'Similarity index (%)', f_in.get('similarity', '%g'|format(s.similarity) if s.similarity is not none else ''), errors.similarity, hide_label=True, extra='inputmode="decimal" placeholder="Percent, for example 12.5"') }}{% endif %}
+    </li>
+    {% for key, label in core.CLEARANCE_DOCS %}{% set f = files.get(key) %}
+    <li>
+      <div class="check-label">
+        <span class="check-icon{{ ' ok' if f }}" aria-hidden="true">{% if f %}{{ icon('check') }}{% endif %}</span>
+        <div><p class="strong">{{ label }}</p><p class="muted small">{{ 'Attached' if f else 'Not attached' }}</p></div>
+      </div>
+      {% if f or edit_cl %}{{ file(key, label, f, errors.get(key), accept='.pdf', disabled=not edit_cl, hide_label=True) }}{% endif %}
+    </li>
+    {% endfor %}
+  </ul>
+  {% if edit_cl %}<div class="form-end"><button class="btn btn-secondary">Save</button></div></form>{% endif %}
+</section>
+
+<section class="block divided">
+  <h3>Revision matrix</h3>
+  {% if total %}
+  <div class="meter-row">
+    <div class="meter" role="progressbar" aria-valuemin="0" aria-valuemax="{{ total }}" aria-valuenow="{{ resolved }}" aria-label="Critiques resolved"><span style="width: {{ (100 * resolved / total)|round|int }}%"></span></div>
+    <p class="muted small">{{ resolved }} of {{ total }} resolved</p>
+  </div>
+  <ol class="critiques">
+    {% for c in critiques %}{% set k = c.id ~ ':' %}{% set mine = form if (form and form.item_id == c.id|string) else {} %}
+    <li class="critique">
+      <div class="critique-head">
+        {{ badge(c.reviewer) }}<strong>{{ c.section }}</strong>
+        {{ badge('Resolved', 'emerald') if c.status == 'resolved' else badge('Open', 'amber') }}
+        {% if active and is_admin and c.status == 'open' and not c.response %}
+        <form method="post">{{ csrf() }}<input type="hidden" name="action" value="remove"><input type="hidden" name="item_id" value="{{ c.id }}"><button class="link-btn link-danger">Remove</button></form>
+        {% endif %}
+      </div>
+      <p class="critique-text">{{ c.comment }}</p>
+      {% if c.status == 'resolved' %}
+      <div class="response">
+        <p>{{ c.response }}</p>
+        <p class="muted small">Page {{ c.page_no }}, lines {{ c.line_range }}{% if c.resolved_at %} · {{ c.resolved_at|date }}{% endif %}</p>
+        {% if active and is_owner %}
+        <form method="post">{{ csrf() }}<input type="hidden" name="action" value="reopen"><input type="hidden" name="item_id" value="{{ c.id }}"><button class="link-btn">Reopen</button></form>
+        {% endif %}
+      </div>
+      {% elif active and is_owner %}
+      <form method="post" class="response-form stack" novalidate>
+        {{ csrf() }}<input type="hidden" name="action" value="answer"><input type="hidden" name="item_id" value="{{ c.id }}">
+        {{ textarea('response', 'Revision made', mine.response, errors.get(k ~ 'response'), rows=3, uid='response-' ~ c.id) }}
+        <div class="grid two">
+          {{ input('page', 'Page', mine.page, errors.get(k ~ 'page'), uid='page-' ~ c.id, extra='inputmode="numeric"') }}
+          {{ input('line_range', 'Lines', mine.line_range, errors.get(k ~ 'line_range'), uid='lines-' ~ c.id, extra='placeholder="4-12"') }}
+        </div>
+        <div class="form-end"><button class="btn btn-success btn-sm">Mark as resolved</button></div>
+      </form>
+      {% else %}
+      <p class="muted small">Awaiting revision.</p>
+      {% endif %}
+    </li>
+    {% endfor %}
+  </ol>
+  {% else %}
+  <p class="muted">{{ 'No critiques yet.' if active else 'No revisions were required.' }}</p>
+  {% endif %}
+  {% if active and is_admin %}
+  <details class="add-box"{% if errors.section or errors.comment or errors.reviewer %} open{% endif %}>
+    <summary class="btn btn-secondary">Add a critique</summary>
+    <form method="post" class="stack" novalidate>
+      {{ csrf() }}<input type="hidden" name="action" value="add_critique">
+      <div class="grid two">
+        {{ select('reviewer', 'Reviewer', core.REVIEWERS, form.reviewer if form else 'Reviewer 1', errors.reviewer) }}
+        {{ input('section', 'Manuscript section', form.section if form else '', errors.section, extra='placeholder="Methodology"') }}
+      </div>
+      {{ textarea('comment', 'Critique', form.comment if form else '', errors.comment, rows=3) }}
+      <div class="form-end"><button class="btn btn-primary btn-sm">Add critique</button></div>
+    </form>
+  </details>
+  {% endif %}
+</section>
+
+{% if active and is_admin %}
+<form method="post" class="step-actions">
+  {{ csrf() }}<input type="hidden" name="action" value="{{ 'complete' if total else 'accept' }}">
+  {% if resolved != total %}<p class="actions-note">{{ (total - resolved)|plural('critique') }} still open.</p>
+  {% elif cl.missing %}<p class="actions-note">Missing: {{ cl.missing|join(', ') }}.</p>
+  {% elif not cl.passes %}<p class="actions-note">The similarity index must be below {{ '%g'|format(core.SIMILARITY_LIMIT) }}%.</p>{% endif %}
+  <button class="btn btn-primary"{% if resolved != total or cl.missing or not cl.passes %} disabled{% endif %}>{{ 'Complete review' if total else 'Accept without revisions' }}</button>
+</form>
+{% endif %}

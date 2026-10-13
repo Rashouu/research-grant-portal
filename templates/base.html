@@ -1,0 +1,83 @@
+{% from "_macros.html" import icon %}{% set user = g.get('user') %}<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>{% block title %}{% endblock %}{{ core.APP_NAME }}</title>
+  <link rel="icon" type="image/svg+xml" href="{{ url_for('static', filename='favicon.svg') }}">
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+  <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Public+Sans:wght@400;500;600;700&family=Source+Serif+4:opsz,wght@8..60,500;8..60,600&display=swap">
+  <link rel="stylesheet" href="{{ url_for('static', filename='style.css') }}">
+</head>
+<body>
+{% if user %}
+<div class="shell">
+  <aside class="sidebar">
+    <a class="brand" href="{{ url_for('home') }}">
+      <span class="brand-mark">{{ icon('landmark') }}</span>
+      <span class="brand-name">{{ core.APP_NAME }}</span>
+    </a>
+    <nav class="nav" aria-label="Main">
+      <a href="{{ url_for('home') }}"{% if request.endpoint == 'home' %} aria-current="page"{% endif %}>{{ icon('house') }}<span>Home</span></a>
+      <a href="{{ url_for('dashboard') }}"{% if request.endpoint in ('dashboard', 'study_step', 'delete_study') %} aria-current="page"{% endif %}>{{ icon('layout-dashboard') }}<span>Dashboard</span></a>
+      <a href="{{ url_for('archive') }}"{% if request.endpoint == 'archive' %} aria-current="page"{% endif %}>{{ icon('library') }}<span class="nav-full">Research archive</span><span class="nav-short">Archive</span></a>
+      <a href="{{ url_for('account') }}"{% if request.endpoint == 'account' %} aria-current="page"{% endif %}>{{ icon('user-round') }}<span>Account</span></a>
+    </nav>
+    {% if user.role == 'RESEARCHER' %}
+    <form method="post" action="{{ url_for('new_study') }}" class="side-new">
+      <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+      <button class="btn btn-rail btn-block">{{ icon('plus') }}New submission</button>
+    </form>
+    {% endif %}
+    <section class="rail-panel" aria-labelledby="rail-waiting">
+      <h2 class="rail-heading" id="rail-waiting">Needs your action{% if rail.waiting %}<span class="rail-count">{{ rail.waiting|length }}</span>{% endif %}</h2>
+      {% if rail.waiting %}
+      <ul class="rail-tasks">
+        {% for item in rail.waiting[:3] %}
+        <li><a href="{{ url_for('study', study_id=item.s.id) }}">
+          <span class="rail-task-title">{{ item.title }}</span>
+          <span class="rail-task-meta" title="Step {{ item.s.step }} · {{ item.status.text }}">Step {{ item.s.step }} · {{ item.status.text }}</span>
+        </a></li>
+        {% endfor %}
+      </ul>
+      {% if rail.waiting|length > 2 %}<a class="rail-more{{ ' rail-more-short' if rail.waiting|length == 3 }}" href="{{ url_for('dashboard') }}">View all {{ rail.waiting|length }} on the dashboard</a>{% endif %}
+      {% else %}
+      <p class="rail-empty">Nothing at the moment.</p>
+      {% endif %}
+    </section>
+    <section class="rail-panel rail-glance" aria-labelledby="rail-glance">
+      <h2 class="rail-heading" id="rail-glance">{{ 'All studies' if user.role == 'ADMIN' else 'My submissions' }}</h2>
+      <dl class="rail-stats">
+        <div><dt>Total</dt><dd>{{ rail.total }}</dd></div>
+        <div><dt>In progress</dt><dd>{{ rail.active }}</dd></div>
+        <div><dt>Cleared</dt><dd>{{ rail.cleared }}</dd></div>
+      </dl>
+    </section>
+    <div class="whoami">
+      <strong>{{ user.full_name }}</strong>
+      <span class="rail-muted hide-sm">{{ user.email }}</span>
+      <span class="role-chip">{{ core.ROLES[user.role] }}</span>
+      <form method="post" action="{{ url_for('logout') }}">
+        <input type="hidden" name="csrf" value="{{ csrf_token() }}">
+        <button class="link-btn rail-link">Sign out</button>
+      </form>
+    </div>
+  </aside>
+  <main class="main" id="main">
+{% else %}
+<header class="topbar">
+  <a class="brand" href="{{ url_for('index') }}">
+    <span class="brand-mark">{{ icon('landmark') }}</span>
+    <span class="brand-name">{{ core.APP_NAME }}</span>
+  </a>
+  <nav class="topbar-nav">{% block topbar %}<a class="btn btn-rail btn-sm" href="{{ url_for('index') }}">Sign in</a>{% endblock %}</nav>
+</header>
+<main class="page" id="main">
+{% endif %}
+{% include "_flashes.html" %}
+{% block content %}{% endblock %}
+</main>
+{% if user %}</div>{% endif %}
+</body>
+</html>
